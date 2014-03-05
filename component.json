@@ -1,0 +1,17 @@
+{
+    "name": "RevertJS",
+    "repo": "ifandelse/RevertJS",
+    "description": "Add undo/redo behavior to your JavaScript objects.",
+    "version": "0.0.1",
+    "keywords": [
+        "undo",
+        "undoable",
+        "redo",
+        "memento",
+        "history",
+        "backtrack",
+        "reset"
+    ],
+    "scripts": ["lib/revertjs.min.js", "lib/revertjs.js"],
+    "license": "MIT"
+}

@@ -1,0 +1,10 @@
+example
+node_modules*
+spec
+src
+ext
+.gitignore
+.idea
+component.json
+.npmignore
+bower*
