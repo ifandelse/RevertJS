@@ -17,34 +17,14 @@
 }(this, function(gnosis, undefined) {
 
     var exclude = gnosis.traverse.exclude;
-    exclude.splice(exclude.length, 0, "undo", "redo", "_changes", "_inProgress", "_position", "addHistory");
-
-    var setValFromPath = function(root, path, val, setFn) {
-        var idx = 1;
-        var segments = path.split(".");
-        var len = segments.length;
-        var lastIdx = len - 1;
-        var target = root;
-        while (idx < len) {
-            if (idx !== lastIdx) {
-                target = target[segments[idx]];
-            } else {
-                if (!setFn) {
-                    target[segments[idx]] = val;
-                } else {
-                    setFn(target[segments[idx]], val);
-                }
-            }
-            idx += 1;
-        }
-    };
+    exclude.splice(exclude.length, 0, "undo", "redo", "__changes__", "__inProgress__", "__position__", "__addHistory__");
 
     var punchMutator = function(target, key, val, kind, path, root) {
         var oldMut = target[key];
         target[key] = function() {
             var oldVal = Undoable.clone(target);
             oldMut.apply(target, arguments);
-            root.addHistory({
+            root.__addHistory__({
                 changeType: "mutation",
                 path: path.slice(0, path.length - key.length - 1),
                 oldVal: oldVal,
@@ -67,7 +47,7 @@
                 var oldType = gnosis.getType(oldVal);
                 var newType = gnosis.getType(x);
                 _val = x;
-                root.addHistory({
+                root.__addHistory__({
                     changeType: "assignment",
                     path: path,
                     oldVal: oldVal,
@@ -95,9 +75,9 @@
             }
         };
         gnosis.traverse(this, transformFn, options, rootNs);
-        this._changes = [];
-        this._position = 0;
-        this._inProgress = false;
+        this.__changes__ = [];
+        this.__position__ = 0;
+        this.__inProgress__ = false;
     };
 
     // The intent here is to override default clone
@@ -108,29 +88,29 @@
         return JSON.parse(JSON.stringify(obj));
     };
 
-    Undoable.prototype.addHistory = function(x) {
-        if (this._inProgress) {
+    Undoable.prototype.__addHistory__ = function(x) {
+        if (this.__inProgress__) {
             return;
         }
-        if (this._position !== this._changes.length - 1) {
-            this._changes = this._changes.slice(0, this._position);
+        if (this.__position__ !== this.__changes__.length - 1) {
+            this.__changes__ = this.__changes__.slice(0, this.__position__);
         }
-        this._changes.push(x);
-        this._position = this._changes.length - 1;
+        this.__changes__.push(x);
+        this.__position__ = this.__changes__.length - 1;
     };
 
     var canApplyChange = function(nexPos) {
         return nexPos >= 0 &&
-            nexPos < this._changes.length
+            nexPos < this.__changes__.length
     };
 
     var applyChange = function(kind) {
-        var change = this._changes[this._position];
+        var change = this.__changes__[this.__position__];
         setFn = change.changeType === "mutation" ? function(target, val) {
             var args = [0, target.length].concat(Undoable.clone(val));
             Array.prototype.splice.apply(target, args);
         } : undefined;
-        setValFromPath(
+        gnosis.setValFromPath(
             this,
             change.path,
             Undoable.clone((kind === "undo") ? change.oldVal : change.newVal),
@@ -140,24 +120,24 @@
 
     Undoable.prototype.undo = function(x) {
         x = x || 1;
-        this._inProgress = true;
-        while (x > 0 && canApplyChange.call(this, this._position)) {
+        this.__inProgress__ = true;
+        while (x > 0 && canApplyChange.call(this, this.__position__)) {
             applyChange.call(this, "undo");
-            this._position -= 1;
+            this.__position__ -= 1;
             x -= 1;
         }
-        this._inProgress = false;
+        this.__inProgress__ = false;
     };
 
     Undoable.prototype.redo = function(x) {
         x = x || 1;
-        this._inProgress = true;
-        while (x > 0 && canApplyChange.call(this, this._position + 1)) {
-            this._position += 1;
+        this.__inProgress__ = true;
+        while (x > 0 && canApplyChange.call(this, this.__position__ + 1)) {
+            this.__position__ += 1;
             applyChange.call(this, "redo");
             x -= 1;
         }
-        this._inProgress = false;
+        this.__inProgress__ = false;
     };
 
     return {
